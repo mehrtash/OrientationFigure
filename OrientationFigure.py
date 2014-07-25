@@ -300,7 +300,7 @@ class OrientationFigureWidget:
         # Calculate the camera position and viewup based on XYToRAS matrix
         camera = vtk.vtkCamera()
 
-        m = sliceNode.GetXYToRAS()
+        m = sliceNode.GetSliceToRAS()
         x = np.matrix([[m.GetElement(0,0),m.GetElement(0,1),m.GetElement(0,2)],
             [m.GetElement(1,0),m.GetElement(1,1),m.GetElement(1,2)],
             [m.GetElement(2,0),m.GetElement(2,1),m.GetElement(2,2)]])
