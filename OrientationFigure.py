@@ -251,16 +251,28 @@ class OrientationFigureWidget:
           #
           # Mappers
           humanMapper = vtk.vtkPolyDataMapper()
-          humanMapper.SetInput(self.humanNode.GetPolyData())
+          if vtk.VTK_MAJOR_VERSION <= 5:
+            humanMapper.SetInput(self.humanNode.GetPolyData())
+          else:
+            humanMapper.SetInputData(self.humanNode.GetPolyData())
 
           shortsMapper = vtk.vtkPolyDataMapper()
-          shortsMapper.SetInput(self.shortsNode.GetPolyData())
+          if vtk.VTK_MAJOR_VERSION <= 5:
+            shortsMapper.SetInput(self.shortsNode.GetPolyData())
+          else:
+            shortsMapper.SetInputData(self.shortsNode.GetPolyData())
 
           leftShoeMapper = vtk.vtkPolyDataMapper()
-          leftShoeMapper.SetInput(self.leftShoeNode.GetPolyData())
+          if vtk.VTK_MAJOR_VERSION <= 5:
+            leftShoeMapper.SetInput(self.leftShoeNode.GetPolyData())
+          else:
+            leftShoeMapper.SetInputData(self.leftShoeNode.GetPolyData())
 
           rightShoeMapper = vtk.vtkPolyDataMapper()
-          rightShoeMapper.SetInput(self.rightShoeNode.GetPolyData())
+          if vtk.VTK_MAJOR_VERSION <= 5:
+            rightShoeMapper.SetInput(self.rightShoeNode.GetPolyData())
+          else:
+            leftShoeMapper.SetInputData(self.leftShoeNode.GetPolyData())
 
           # Actors
           self.humanActor = vtk.vtkActor()
