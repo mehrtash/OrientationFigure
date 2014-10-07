@@ -241,6 +241,7 @@ class OrientationFigureWidget:
       ren = self.renderers[sliceViewName]
       rw = self.sliceViews[sliceViewName].renderWindow()
       ren.SetViewport(self.viewPortStartWidth,0,1,self.viewPortFinishHeight)
+      ren.SetLayer(1)
 
       if self.showHumanModelCheckBox.checked:
 
@@ -272,24 +273,28 @@ class OrientationFigureWidget:
           if vtk.VTK_MAJOR_VERSION <= 5:
             rightShoeMapper.SetInput(self.rightShoeNode.GetPolyData())
           else:
-            leftShoeMapper.SetInputData(self.leftShoeNode.GetPolyData())
+            rightShoeMapper.SetInputData(self.rightShoeNode.GetPolyData())
 
           # Actors
           self.humanActor = vtk.vtkActor()
           self.humanActor.SetMapper(humanMapper)
-          self.humanActor.GetProperty().SetColor(0.93,0.81,0.80)
+          #self.humanActor.GetProperty().SetColor(0.93,0.81,0.80)
+          self.humanActor.GetProperty().SetColor(177/256,122/256,101/256)
 
           self.shortsActor = vtk.vtkActor()
           self.shortsActor.SetMapper(shortsMapper)
-          self.shortsActor.GetProperty().SetColor(0,0,1)
+          #self.shortsActor.GetProperty().SetColor(0,0,1)
+          self.shortsActor.GetProperty().SetColor(0/256,151/256,206/256)
 
           self.leftShoeActor = vtk.vtkActor()
           self.leftShoeActor.SetMapper(leftShoeMapper)
-          self.leftShoeActor.GetProperty().SetColor(1,0,0)
+          self.leftShoeActor.GetProperty().SetColor(128/256,174/256,128/256)
 
           self.rightShoeActor = vtk.vtkActor()
           self.rightShoeActor.SetMapper(rightShoeMapper)
-          self.rightShoeActor.GetProperty().SetColor(0,1,0)
+          #self.rightShoeActor.GetProperty().SetColor(0,1,0)
+          self.rightShoeActor.GetProperty().SetColor(216/256,101/256,79/256)
+
 
         # Add actors to renderer
         ren.AddActor(self.humanActor)
@@ -301,6 +306,26 @@ class OrientationFigureWidget:
         camera = vtk.vtkCamera()
 
         m = sliceNode.GetSliceToRAS()
+ 
+        v = np.array([[m.GetElement(0,0),m.GetElement(0,1),m.GetElement(0,2)],
+            [m.GetElement(1,0),m.GetElement(1,1),m.GetElement(1,2)],
+            [m.GetElement(2,0),m.GetElement(2,1),m.GetElement(2,2)]])
+        det = np.linalg.det(v)
+        if det > 0: # right hand
+          y = np.array([0,0,-self.cameraPositionMultiplier])
+        elif det < 0: # left hand
+          y = np.array([0,0,self.cameraPositionMultiplier])
+ 
+        x = np.matrix([[m.GetElement(0,0),m.GetElement(0,1),m.GetElement(0,2)],
+            [m.GetElement(1,0),m.GetElement(1,1),m.GetElement(1,2)],
+            [m.GetElement(2,0),m.GetElement(2,1),m.GetElement(2,2)]])
+ 
+        # Calculating position
+        position = np.inner(x,y)
+        camera.SetPosition(-position[0,0],-position[0,1],-position[0,2])
+
+        '''
+        m = sliceNode.GetSliceToRAS()
         x = np.matrix([[m.GetElement(0,0),m.GetElement(0,1),m.GetElement(0,2)],
             [m.GetElement(1,0),m.GetElement(1,1),m.GetElement(1,2)],
             [m.GetElement(2,0),m.GetElement(2,1),m.GetElement(2,2)]])
@@ -310,6 +335,7 @@ class OrientationFigureWidget:
         position = np.inner(x,y)
         camera.SetPosition(-position[0,0],-position[0,1],-position[0,2])
 
+        '''
         # Calculating viewUp
         n = np.array([0,1,0])
         viewUp = np.inner(x,n)
@@ -323,7 +349,7 @@ class OrientationFigureWidget:
         ren.RemoveActor(self.humanActor)
         ren.RemoveActor(self.shortsActor)
         ren.RemoveActor(self.leftShoeActor)
-        ren.RemoveActor(self.leftShoeActor)
+        ren.RemoveActor(self.rightShoeActor)
         rw.RemoveRenderer(ren)
 
       # Refresh view
