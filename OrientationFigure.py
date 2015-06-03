@@ -54,10 +54,12 @@ class OrientationFigureWidget:
     self.layoutManager = slicer.app.layoutManager()
     self.sliceViews = {}
 
-    self.cameraPositionMultiplier = 350
+    self.cameraPositionMultiplier = 5
     self.viewPortFinishHeight = 0.3
     self.viewPortStartWidth = 0.8
 
+    self.cube = None
+    self.axes = None
     self.humanActor = None
 
     #
@@ -136,18 +138,36 @@ class OrientationFigureWidget:
     self.layout.addWidget(parametersCollapsibleButton)
 
     # Layout within the dummy collapsible button
-    parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
+    settingsLayout = qt.QVBoxLayout(parametersCollapsibleButton)
+    self.showHumanModelCheckBox = qt.QCheckBox('Enable')
+    settingsLayout.addWidget(self.showHumanModelCheckBox)
+
+    markerTypeWidget = qt.QWidget()
+    settingsLayout.addWidget(markerTypeWidget)
+    markerTypesLayout = qt.QHBoxLayout(markerTypeWidget)
+    markerTypeLabel = qt.QLabel('Marker Type: ')
+    markerTypesLayout.addWidget(markerTypeLabel)
+    self.cubeRadioButton = qt.QRadioButton('Cube')
+    self.cubeRadioButton.checked = True
+    markerTypesLayout.addWidget(self.cubeRadioButton)
+    self.axesRadioButton = qt.QRadioButton('Axes')
+    markerTypesLayout.addWidget(self.axesRadioButton)
+    self.humanRadioButton = qt.QRadioButton('Human')
+    markerTypesLayout.addWidget(self.humanRadioButton)
+    for radioButton in [self.cubeRadioButton, self.axesRadioButton, self.humanRadioButton]:
+      radioButton.connect('clicked()', self.updateSliceViewFromGUI)
+
+    widget = qt.QWidget()
+    settingsLayout.addWidget(widget)
 
     #
-    self.showHumanModelCheckBox = qt.QCheckBox('Show Orientation Dude')
-    parametersFormLayout.addRow(self.showHumanModelCheckBox)
-
+    parametersFormLayout = qt.QFormLayout(widget)
     # camera zoom slider
     self.zoomSlider = ctk.ctkSliderWidget()
     parametersFormLayout.addRow('Camera Zoom: ', self.zoomSlider)
-    self.zoomSlider.value = 35
+    self.zoomSlider.value = 20
     self.zoomSlider.minimum = 1
-    self.zoomSlider.maximum = 100
+    self.zoomSlider.maximum = 40
     self.zoomSlider.pageStep = 1
     self.zoomSlider.enabled = False
     self.zoomSlider.connect('valueChanged(double)', self.zoomSliderValueChanged)
@@ -170,7 +190,7 @@ class OrientationFigureWidget:
     # connections
     self.showHumanModelCheckBox.connect('clicked()',
         self.updateSliceViewFromGUI)
-    self.viewPortWidthSlider .connect('valueChanged(double)',
+    self.viewPortWidthSlider.connect('valueChanged(double)',
         self.viewPortWidthValueChanged)
     self.viewPortHeightSlider.connect('valueChanged(double)',
         self.viewPortHeightValueChanged)
@@ -179,7 +199,7 @@ class OrientationFigureWidget:
     pass
 
   def zoomSliderValueChanged(self):
-    self.cameraPositionMultiplier = self.zoomSlider.value*10
+    self.cameraPositionMultiplier = 100/self.zoomSlider.value
     self.updateSliceViewFromGUI()
 
   def viewPortWidthValueChanged(self, value):
@@ -244,8 +264,6 @@ class OrientationFigureWidget:
       ren.SetLayer(1)
 
       if self.showHumanModelCheckBox.checked:
-
-
         if self.humanActor == None:
           #
           # Making vtk mappers and actors
@@ -276,31 +294,75 @@ class OrientationFigureWidget:
             rightShoeMapper.SetInputData(self.rightShoeNode.GetPolyData())
 
           # Actors
+          humanModelScale = 0.01
           self.humanActor = vtk.vtkActor()
           self.humanActor.SetMapper(humanMapper)
           #self.humanActor.GetProperty().SetColor(0.93,0.81,0.80)
-          self.humanActor.GetProperty().SetColor(177/256,122/256,101/256)
+          self.humanActor.GetProperty().SetColor(255/256,204/256,34/256)
+          self.humanActor.SetScale(humanModelScale,humanModelScale,humanModelScale)
 
           self.shortsActor = vtk.vtkActor()
           self.shortsActor.SetMapper(shortsMapper)
           #self.shortsActor.GetProperty().SetColor(0,0,1)
-          self.shortsActor.GetProperty().SetColor(0/256,151/256,206/256)
+          self.shortsActor.GetProperty().SetColor(0,0,1)
+          self.shortsActor.SetScale(humanModelScale,humanModelScale,humanModelScale)
 
           self.leftShoeActor = vtk.vtkActor()
           self.leftShoeActor.SetMapper(leftShoeMapper)
-          self.leftShoeActor.GetProperty().SetColor(128/256,174/256,128/256)
+          self.leftShoeActor.GetProperty().SetColor(1,0,0)
+          self.leftShoeActor.SetScale(humanModelScale,humanModelScale,humanModelScale)
 
           self.rightShoeActor = vtk.vtkActor()
           self.rightShoeActor.SetMapper(rightShoeMapper)
-          #self.rightShoeActor.GetProperty().SetColor(0,1,0)
-          self.rightShoeActor.GetProperty().SetColor(216/256,101/256,79/256)
+          self.rightShoeActor.GetProperty().SetColor(0,1,0)
+          self.rightShoeActor.SetScale(humanModelScale,humanModelScale,humanModelScale)
 
+        if self.cube == None:
+          self.cube = vtk.vtkAnnotatedCubeActor()
+          self.cube.SetXPlusFaceText('R')
+          self.cube.SetXMinusFaceText('L')
+          self.cube.SetYMinusFaceText('A')
+          self.cube.SetYPlusFaceText('P')
+          self.cube.SetZMinusFaceText('I')
+          self.cube.SetZPlusFaceText('S')
+          self.cube.SetZFaceTextRotation(90)
+          self.cube.GetTextEdgesProperty().SetColor(0.95,0.95,0.95)
+          self.cube.GetTextEdgesProperty().SetLineWidth(1)
+          self.cube.GetCubeProperty().SetColor(0.15,0.15,0.15)
+
+        if self.axes == None:
+          self.axes = vtk.vtkAxesActor()
+          self.axes.SetXAxisLabelText('R')
+          self.axes.SetYAxisLabelText('A')
+          self.axes.SetZAxisLabelText('S')
+          transform = vtk.vtkTransform()
+          transform.Translate(0,0,0)
+          self.axes.SetUserTransform(transform)
 
         # Add actors to renderer
-        ren.AddActor(self.humanActor)
-        ren.AddActor(self.shortsActor)
-        ren.AddActor(self.leftShoeActor)
-        ren.AddActor(self.rightShoeActor)
+        if self.cubeRadioButton.checked:
+          ren.AddActor(self.cube)
+          ren.RemoveActor(self.humanActor)
+          ren.RemoveActor(self.shortsActor)
+          ren.RemoveActor(self.leftShoeActor)
+          ren.RemoveActor(self.rightShoeActor)
+          ren.RemoveActor(self.axes)
+
+        if self.axesRadioButton.checked:
+          ren.AddActor(self.axes)
+          ren.RemoveActor(self.humanActor)
+          ren.RemoveActor(self.shortsActor)
+          ren.RemoveActor(self.leftShoeActor)
+          ren.RemoveActor(self.rightShoeActor)
+          ren.RemoveActor(self.cube)
+
+        if self.humanRadioButton.checked:
+          ren.AddActor(self.humanActor)
+          ren.AddActor(self.shortsActor)
+          ren.AddActor(self.leftShoeActor)
+          ren.AddActor(self.rightShoeActor)
+          ren.RemoveActor(self.cube)
+          ren.RemoveActor(self.axes)
 
         # Calculate the camera position and viewup based on XYToRAS matrix
         camera = vtk.vtkCamera()
@@ -350,6 +412,8 @@ class OrientationFigureWidget:
         ren.RemoveActor(self.shortsActor)
         ren.RemoveActor(self.leftShoeActor)
         ren.RemoveActor(self.rightShoeActor)
+        ren.RemoveActor(self.axes)
+        ren.RemoveActor(self.cube)
         rw.RemoveRenderer(ren)
 
       # Refresh view
